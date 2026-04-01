@@ -3,7 +3,7 @@
 import { useState, useTransition, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, Edit, Trash2, Loader2, UserSearch } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Loader2, UserSearch, Eye } from "lucide-react";
 import { Customer } from "@/types";
 import { formatDate } from "@/lib/utils";
 import { createCustomer, updateCustomer, deleteCustomer, getCustomerByNic } from "@/app/actions/customers";
@@ -163,8 +163,8 @@ export default function CustomersClient({ customers, total, currentPage }: Custo
               <tr key={c.id}>
                 <td>
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditCustomer(c); setShowForm(false); }} className="text-blue-500 hover:text-blue-700"><Edit className="w-4 h-4" /></button>
-                    <button onClick={() => setDeleteId(c.id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                    <Link href={`/customers/${c.id}`} className="text-green-600 hover:text-green-700" title="View"><Eye className="w-4 h-4" /></Link>
+                    <button onClick={() => setDeleteId(c.id)} className="text-red-400 hover:text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>
                 <td><p className="font-medium text-gray-900">{c.name}</p></td>

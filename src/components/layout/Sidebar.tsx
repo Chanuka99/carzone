@@ -31,10 +31,14 @@ const navItems = [
   { href: "/agreements", icon: FileText, label: "Agreements" },
 ];
 
+// Admin-only nav (Users management + company settings)
 const adminItems = [
   { href: "/users", icon: UserCog, label: "Users" },
   { href: "/settings", icon: Settings, label: "Company" },
 ];
+
+// Employee nav items (non-admin only gets activity log)
+// We reuse /users which shows only their own activity for non-admins
 
 interface SidebarProps {
   user: SessionUser;
@@ -71,7 +75,7 @@ export default function Sidebar({ user }: SidebarProps) {
           ))}
         </div>
 
-        {user.role === "admin" && (
+        {user.role === "admin" ? (
           <>
             <div className="mt-4 mb-1 px-3">
               <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Admin</p>
@@ -87,6 +91,21 @@ export default function Sidebar({ user }: SidebarProps) {
                   <span>{item.label}</span>
                 </Link>
               ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mt-4 mb-1 px-3">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">My Account</p>
+            </div>
+            <div className="space-y-0.5">
+              <Link
+                href="/users"
+                className={cn("sidebar-link", isActive("/users") && "active")}
+              >
+                <UserCog className="w-4 h-4 flex-shrink-0" />
+                <span>Activity Log</span>
+              </Link>
             </div>
           </>
         )}

@@ -1,0 +1,426 @@
+"use client";
+
+import { useState, useTransition, useCallback, useEffect } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft, User, Edit, Activity, Shield, Mail, Calendar,
+  AlertCircle, RefreshCw, ChevronDown
+} from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import StatusBadge from "@/components/shared/StatusBadge";
+import { updateUser } from "@/app/actions/users";
+import { getActivityLogs } from "@/app/actions/activity";
+import { useRouter } from "next/navigation";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+type LogEntry = {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  action: string;
+  module: string;
+  entity_id: string | null;
+  entity_label: string | null;
+  details: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+};
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const ACTION_COLORS: Record<string, string> = {
+  created: "bg-green-100 text-green-700",
+  updated: "bg-blue-100 text-blue-700",
+  deleted: "bg-red-100 text-red-700",
+  activated: "bg-emerald-100 text-emerald-700",
+  deactivated: "bg-orange-100 text-orange-700",
+  returned: "bg-purple-100 text-purple-700",
+  cancelled: "bg-red-100 text-red-600",
+  status_changed: "bg-yellow-100 text-yellow-700",
+  exchanged: "bg-indigo-100 text-indigo-700",
+  login: "bg-gray-100 text-gray-600",
+};
+
+const MODULE_ICONS: Record<string, string> = {
+  Vehicles: "🚗", Customers: "👤", Suppliers: "🏢",
+  Guarantors: "🛡️", Rentals: "📋", Users: "👥", Settings: "⚙️",
+};
+
+const MODULES = ["all", "Vehicles", "Customers", "Suppliers", "Guarantors", "Rentals", "Users", "Settings"];
+const PAGE_SIZE = 15;
+
+function formatTime(isoStr: string) {
+  const d = new Date(isoStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+  const diffD = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffH < 24) return `${diffH}h ago`;
+  if (diffD < 7) return `${diffD}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// ─── Activity Log Sub-component ───────────────────────────────────────────────
+function UserActivityLog({ userId }: { userId: string }) {
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [moduleFilter, setModuleFilter] = useState("all");
+
+  const load = useCallback(
+    async (reset = false) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const currentPage = reset ? 1 : page;
+        const result = await getActivityLogs({
+          userId,
+          module: moduleFilter !== "all" ? moduleFilter : undefined,
+          page: currentPage,
+          pageSize: PAGE_SIZE,
+        });
+        if (reset) {
+          setLogs(result.data as LogEntry[]);
+          setPage(1);
+        } else {
+          setLogs((prev) => [...prev, ...(result.data as LogEntry[])]);
+        }
+        setTotal(result.count);
+      } catch (e: any) {
+        setError(e.message ?? "Failed to load logs");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [userId, page, moduleFilter]
+  );
+
+  useEffect(() => {
+    load(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, moduleFilter]);
+
+  const loadMore = async () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    setLoading(true);
+    try {
+      const result = await getActivityLogs({
+        userId,
+        module: moduleFilter !== "all" ? moduleFilter : undefined,
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+      setLogs((prev) => [...prev, ...(result.data as LogEntry[])]);
+      setTotal(result.count);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Filters */}
+      <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+        <span className="text-xs text-gray-400">{total} events</span>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <select
+              value={moduleFilter}
+              onChange={(e) => setModuleFilter(e.target.value)}
+              className="form-select text-xs h-8 pr-7 pl-2 appearance-none"
+            >
+              <option value="all">All Modules</option>
+              {MODULES.filter((m) => m !== "all").map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+          </div>
+          <button onClick={() => load(true)} className="btn-secondary text-xs h-8 px-3" title="Refresh">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="px-5 py-4 flex items-center gap-2 text-red-600 text-sm">
+          <AlertCircle className="w-4 h-4" />{error}
+        </div>
+      )}
+
+      <div className="divide-y divide-gray-50">
+        {logs.length === 0 && !loading ? (
+          <div className="flex flex-col items-center py-12 text-gray-300">
+            <Activity className="w-10 h-10 mb-3" />
+            <p className="text-sm text-gray-400">No activity logged yet.</p>
+          </div>
+        ) : (
+          logs.map((log) => (
+            <div key={log.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-base flex-shrink-0 mt-0.5">
+                {MODULE_ICONS[log.module] ?? "📌"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${ACTION_COLORS[log.action] ?? "bg-gray-100 text-gray-600"}`}>
+                    {log.action.replace("_", " ")}
+                  </span>
+                  <span className="text-xs text-gray-500 font-medium">{log.module}</span>
+                  {log.entity_label && (
+                    <span className="text-xs text-gray-700 font-semibold">— {log.entity_label}</span>
+                  )}
+                </div>
+
+                {/* Old → New diff */}
+                {log.action === "updated" && (log.old_value || log.new_value) ? (
+                  <div className="mt-1.5 space-y-1">
+                    {(log.details ?? "").split(" | ").filter(Boolean).map((change, i) => {
+                      // Parse "Label: "old" → "new""
+                      const arrowParts = change.split(" → ");
+                      if (arrowParts.length === 2) {
+                        const label = arrowParts[0].replace(/^(.+?):\s*"?/, "$1").replace(/"$/, "").trim();
+                        const colonIdx = arrowParts[0].indexOf(":");
+                        const fieldLabel = colonIdx >= 0 ? arrowParts[0].substring(0, colonIdx).trim() : arrowParts[0].trim();
+                        const oldVal = arrowParts[0].substring(colonIdx + 1).trim().replace(/^"|"$/g, "");
+                        const newVal = arrowParts[1].trim().replace(/^"|"$/g, "");
+                        return (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <span className="text-gray-500 min-w-[80px] font-medium">{fieldLabel}:</span>
+                            <span className="bg-red-50 text-red-600 px-1.5 py-0.5 rounded line-through">{oldVal}</span>
+                            <span className="text-gray-400">→</span>
+                            <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-medium">{newVal}</span>
+                          </div>
+                        );
+                      }
+                      return <p key={i} className="text-xs text-gray-400">{change}</p>;
+                    })}
+                  </div>
+                ) : log.details ? (
+                  <p className="text-xs text-gray-400 mt-0.5">{log.details}</p>
+                ) : null}
+
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs text-gray-400">{formatTime(log.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
+        {loading && (
+          <div className="px-5 py-4 space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 bg-gray-100 rounded w-1/3" />
+                  <div className="h-2.5 bg-gray-100 rounded w-1/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {logs.length < total && !loading && (
+        <div className="px-5 py-3 border-t border-gray-50 flex items-center justify-between">
+          <span className="text-xs text-gray-400">Showing {logs.length} of {total}</span>
+          <button onClick={loadMore} className="btn-secondary text-xs">Load More</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function UserDetailClient({
+  user,
+  isAdmin,
+  isOwnProfile,
+}: {
+  user: any;
+  isAdmin: boolean;
+  isOwnProfile: boolean;
+}) {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  // Activity Logs tab: admin can see for any user; employees only for their own
+  const canSeeActivity = isAdmin || isOwnProfile;
+  const [tab, setTab] = useState<"details" | "activity">("details");
+
+  async function handleEditSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await updateUser(user.id, fd);
+      if ("error" in result && result.error) { setError(result.error); return; }
+      setIsEditing(false);
+      // Use push instead of refresh so the new session cookie is picked up
+      // across the entire layout (sidebar name, etc.)
+      router.push(`/users/${user.id}`);
+      router.refresh();
+    });
+  }
+
+  const tabs = [
+    { key: "details" as const, label: "Details", icon: User },
+    ...(canSeeActivity ? [{ key: "activity" as const, label: "Activity Log", icon: Activity }] : []),
+  ];
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/users" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <ArrowLeft className="w-4 h-4 text-gray-600" />
+        </Link>
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+          <span className="text-base font-bold text-blue-700">{user.full_name.charAt(0).toUpperCase()}</span>
+        </div>
+        <div className="flex-1">
+          <h1 className="page-title">{user.full_name}</h1>
+          <p className="page-subtitle">@{user.username}{user.email ? ` · ${user.email}` : ""}</p>
+        </div>
+        <StatusBadge status={user.role} />
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${user.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+          {user.is_active ? "Active" : "Inactive"}
+        </span>
+      </div>
+
+      {/* Tab card */}
+      <div className="section-card overflow-hidden">
+        {/* Tab bar */}
+        <div className="px-5 pt-4 border-b border-gray-100 flex items-center justify-between -mb-px">
+          <div className="flex gap-1">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => { setTab(key); setIsEditing(false); }}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  tab === key
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* Edit button — only on Details tab, only for admins */}
+          {tab === "details" && isAdmin && !isEditing && (
+            <button onClick={() => setIsEditing(true)} className="btn-secondary text-sm">
+              <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+            </button>
+          )}
+        </div>
+
+        {/* ── Details Tab ── */}
+        {tab === "details" && (
+          <>
+            {isEditing ? (
+              <div className="p-5 bg-blue-50/30">
+                <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
+                  <div>
+                    <label className="form-label text-xs">Username</label>
+                    <input defaultValue={user.username} className="form-input text-sm bg-gray-50 text-gray-500" disabled />
+                    <p className="text-[10px] text-gray-400 mt-1">Username cannot be changed.</p>
+                  </div>
+                  <div>
+                    <label className="form-label text-xs">Full Name <span className="text-red-500">*</span></label>
+                    <input name="full_name" required defaultValue={user.full_name} className="form-input text-sm" />
+                  </div>
+                  <div>
+                    <label className="form-label text-xs">Email</label>
+                    <input name="email" type="email" defaultValue={user.email ?? ""} className="form-input text-sm" />
+                  </div>
+                  <div>
+                    <label className="form-label text-xs">Role</label>
+                    <select name="role" defaultValue={user.role} className="form-select text-sm">
+                      <option value="employee">Employee</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2 border-t border-gray-100 pt-3 mt-1">
+                    <label className="form-label text-xs">
+                      Change Password <span className="text-gray-400 font-normal">(leave blank to keep)</span>
+                    </label>
+                    <input name="password" type="password" className="form-input text-sm" placeholder="••••••••" />
+                  </div>
+                  {error && <p className="md:col-span-2 text-sm text-red-600">{error}</p>}
+                  <div className="md:col-span-2 flex gap-3 mt-2">
+                    <button type="submit" disabled={isPending} className="btn-primary text-sm">
+                      {isPending ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button type="button" onClick={() => { setIsEditing(false); setError(null); }} className="btn-secondary text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div className="p-5">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                      <User className="w-3 h-3" /> Username
+                    </p>
+                    <p className="text-sm font-medium font-mono bg-gray-50 px-2 py-1 rounded">@{user.username}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                      <User className="w-3 h-3" /> Full Name
+                    </p>
+                    <p className="text-sm font-medium">{user.full_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                      <Mail className="w-3 h-3" /> Email
+                    </p>
+                    <p className="text-sm font-medium">{user.email ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                      <Shield className="w-3 h-3" /> Role
+                    </p>
+                    <StatusBadge status={user.role} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1 flex items-center gap-1.5">
+                      <Calendar className="w-3 h-3" /> Member Since
+                    </p>
+                    <p className="text-sm font-medium">{formatDate(user.created_at)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Account Status</p>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${user.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                      {user.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── Activity Log Tab ── */}
+        {tab === "activity" && canSeeActivity && (
+          <UserActivityLog userId={user.id} />
+        )}
+      </div>
+    </div>
+  );
+}

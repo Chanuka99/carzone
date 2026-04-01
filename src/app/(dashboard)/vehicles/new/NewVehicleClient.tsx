@@ -10,6 +10,7 @@ import {
   BRANDS, COLORS, FUEL_TYPES, VEHICLE_TYPES, TRANSMISSION_TYPES, PAYMENT_TYPES, YEARS,
   getModels, calcTiersFromMonthly,
 } from "@/lib/vehicleData";
+import FileUploader from "@/components/shared/FileUploader";
 
 type Tier = { label: string; days_from: number; days_to: number | null; rate_per_day: number };
 
@@ -18,11 +19,9 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Brand / model
   const [brand, setBrand] = useState("Toyota");
   const [model, setModel] = useState("Corolla");
   const [models, setModels] = useState<string[]>(getModels("Toyota"));
-  const [fuelType, setFuelType] = useState("Petrol");
 
   // Rate tiers
   const [monthlyRate, setMonthlyRate] = useState(30000);
@@ -59,7 +58,7 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
     });
   }
 
-  const needsEcoTest = fuelType === "Petrol" || fuelType === "Diesel";
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -118,23 +117,6 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
             </select>
           </div>
 
-          {/* Fuel Type */}
-          <div>
-            <label className="form-label">Fuel Type</label>
-            <select name="fuel_type" className="form-select" value={fuelType} onChange={e => setFuelType(e.target.value)}>
-              {FUEL_TYPES.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-
-          {/* Transmission */}
-          <div>
-            <label className="form-label">Transmission</label>
-            <select name="transmission" className="form-select">
-              <option value="">— Select —</option>
-              {TRANSMISSION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-
           {/* Source */}
           <div>
             <label className="form-label">Source</label>
@@ -150,15 +132,6 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
             <select name="supplier_id" className="form-select">
               <option value="">— No Supplier —</option>
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-
-          {/* Payment Type */}
-          <div>
-            <label className="form-label">Payment Type</label>
-            <select name="payment_type" className="form-select">
-              <option value="">— Select —</option>
-              {PAYMENT_TYPES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
@@ -185,28 +158,24 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
             <label className="form-label">Revenue License Expiry</label>
             <input name="revenue_license_expiry" type="date" className="form-input" />
           </div>
-          <div>
-            <label className="form-label">Handover Date</label>
-            <input name="handover_date" type="date" className="form-input" />
-          </div>
-          <div>
-            <label className="form-label">Agreement End Date</label>
-            <input name="agreement_end_date" type="date" className="form-input" />
-          </div>
-
-          {/* Eco Test — conditional on Petrol/Diesel */}
-          {needsEcoTest && (
-            <div>
-              <label className="form-label">Eco Test Expiry</label>
-              <input name="eco_test_expiry" type="date" className="form-input" />
-            </div>
-          )}
         </div>
 
         {/* Notes */}
         <div className="px-5 pb-5">
           <label className="form-label">Notes</label>
           <textarea name="notes" rows={2} className="form-input resize-none" />
+        </div>
+
+        {/* Vehicle Photos Upload */}
+        <div className="px-5 pb-5">
+          <FileUploader
+            label="Vehicle Photos"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept="image/*"
+            multiple={true}
+            maxFiles={6}
+          />
         </div>
       </div>
 

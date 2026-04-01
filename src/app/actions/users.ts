@@ -1,9 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
-import { requireAdmin, requireAuth } from '@/lib/auth';
+import { requireAdmin, requireAuth, getSession, createSessionToken } from '@/lib/auth';
+import { logActivity } from '@/app/actions/activity';
+import { buildDiff } from '@/lib/diff';
 import bcrypt from 'bcryptjs';
+
+const USER_FIELDS: Record<string, string> = {
+  full_name: 'Full Name', email: 'Email', role: 'Role',
+};
 
 export async function getUsers() {
   await requireAdmin();
@@ -28,11 +35,15 @@ export async function createUser(formData: FormData) {
 
   if (error) return { error: error.message };
   revalidatePath('/users');
+  await logActivity({ action: 'created', module: 'Users', entity_id: data.id, entity_label: `${data.full_name} (@${data.username})`, details: `Role: ${data.role}` });
   return { data };
 }
 
 export async function updateUser(id: string, formData: FormData) {
   await requireAdmin();
+
+  // Fetch current before update for diff
+  const { data: current } = await supabaseAdmin.from('users').select('full_name, email, role').eq('id', id).single();
 
   const updates: Record<string, unknown> = {
     full_name: formData.get('full_name') as string,
@@ -47,13 +58,32 @@ export async function updateUser(id: string, formData: FormData) {
 
   const { error } = await supabaseAdmin.from('users').update(updates).eq('id', id);
   if (error) return { error: error.message };
+
+  // Sync session name if modifying own profile
+  const session = await getSession();
+  if (session && session.id === id) {
+    const newSession = { ...session, full_name: updates.full_name as string, role: updates.role as string };
+    const cookieStore = await cookies();
+    cookieStore.set('cz_session', createSessionToken(newSession), {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 7
+    });
+    // Revalidate the whole layout so sidebar / header picks up new name
+    revalidatePath('/', 'layout');
+  }
+
   revalidatePath('/users');
+  revalidatePath(`/users/${id}`);
+  const diff = current ? buildDiff(current as Record<string, unknown>, updates, USER_FIELDS) : { details: '', old_value: '', new_value: '' };
+  await logActivity({ action: 'updated', module: 'Users', entity_id: id, entity_label: updates.full_name as string, ...diff });
   return { success: true };
 }
 
 export async function toggleUserActive(id: string, isActive: boolean) {
   await requireAdmin();
+  const { data: u } = await supabaseAdmin.from('users').select('full_name, username').eq('id', id).single();
   await supabaseAdmin.from('users').update({ is_active: isActive }).eq('id', id);
+  await logActivity({ action: isActive ? 'activated' : 'deactivated', module: 'Users', entity_id: id, entity_label: u ? `${u.full_name} (@${u.username})` : id });
   revalidatePath('/users');
   return { success: true };
 }
@@ -120,5 +150,6 @@ export async function updateCompanySettings(formData: FormData) {
   }
 
   revalidatePath('/settings');
+  await logActivity({ action: 'updated', module: 'Settings', entity_label: payload.company_name, details: 'Company settings updated' });
   return { success: true };
 }

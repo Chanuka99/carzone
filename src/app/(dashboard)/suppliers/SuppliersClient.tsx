@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, Edit, Trash2, Loader2, Car } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Loader2, Car, Eye } from "lucide-react";
 import { Supplier } from "@/types";
 import { createSupplier, updateSupplier, deleteSupplier } from "@/app/actions/suppliers";
 import PasswordConfirmModal from "@/components/shared/PasswordConfirmModal";
@@ -160,10 +160,10 @@ export default function SuppliersClient({
               <tr key={s.id}>
                 <td>
                   <div className="flex gap-2">
-                    <button onClick={() => { setEditSupplier(s); setShowForm(false); }} className="text-blue-500 hover:text-blue-700">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setDeleteId(s.id)} className="text-red-400 hover:text-red-600">
+                    <Link href={`/suppliers/${s.id}`} className="text-green-600 hover:text-green-700" title="View">
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    <button onClick={() => setDeleteId(s.id)} className="text-red-400 hover:text-red-600" title="Delete">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -175,7 +175,7 @@ export default function SuppliersClient({
                 <td className="text-gray-500 max-w-[150px] truncate">{s.address ?? "—"}</td>
                 <td>
                   <Link href={`/vehicles?supplier=${s.id}`} className="inline-flex items-center gap-1 text-blue-500 text-xs hover:underline">
-                    <Car className="w-3 h-3" /> View
+                    <Car className="w-3 h-3" /> Vehicles
                   </Link>
                 </td>
               </tr>

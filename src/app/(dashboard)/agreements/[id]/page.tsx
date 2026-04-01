@@ -2,7 +2,8 @@ import { getRentalById } from "@/app/actions/rentals";
 import { getCompanySettings } from "@/app/actions/users";
 import { notFound } from "next/navigation";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { Car, Phone, MapPin, User, Shield } from "lucide-react";
+import { Car, User, Shield } from "lucide-react";
+import PrintButton from "./PrintButton";
 
 export default async function AgreementPage({ params }: { params: Promise<{ id: string }> }) {
   const p = await params;
@@ -14,6 +15,8 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="min-h-screen bg-white p-8 max-w-3xl mx-auto">
+      <style dangerouslySetInnerHTML={{ __html: `@media print { .no-print { display: none !important; } @page { margin: 1cm; } }` }} />
+
       {/* Header */}
       <div className="border-b-2 border-gray-900 pb-6 mb-6">
         <div className="flex items-start justify-between">
@@ -99,7 +102,7 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
 
       {/* Rental Details */}
       <div className="mb-6">
-        <h3 className="font-semibold text-gray-900 mb-3">Rental Period & Charges</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">Rental Period &amp; Charges</h3>
         <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
           <tbody>
             {[
@@ -146,9 +149,9 @@ export default async function AgreementPage({ params }: { params: Promise<{ id: 
         This is a system-generated document. {settings?.company_name ?? "CarZone"} — All rights reserved.
       </div>
 
-      {/* Print button */}
-      <div className="mt-6 flex justify-center print:hidden">
-        <button onClick={() => window.print()} className="btn-primary">Print Agreement</button>
+      {/* Print button — client component */}
+      <div className="no-print mt-6 flex justify-center">
+        <PrintButton />
       </div>
     </div>
   );

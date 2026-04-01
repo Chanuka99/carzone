@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createSessionToken, getSession } from '@/lib/auth';
 import { SessionUser } from '@/types';
+import { logActivity } from '@/app/actions/activity';
 
 const SESSION_COOKIE = 'cz_session';
 
@@ -62,7 +63,7 @@ export async function loginAction(formData: FormData) {
   };
 
   const token = createSessionToken(sessionUser);
-  
+
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -71,6 +72,19 @@ export async function loginAction(formData: FormData) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
   });
+
+  // Log the login — write directly since session cookie not yet readable by getSession()
+  try {
+    await supabaseAdmin.from('activity_logs').insert({
+      user_id: sessionUser.id,
+      user_name: sessionUser.full_name || sessionUser.username,
+      user_role: sessionUser.role,
+      action: 'login',
+      module: 'Users',
+      entity_label: sessionUser.username,
+      details: 'Logged in',
+    });
+  } catch { /* silent */ }
 
   redirect('/dashboard');
 }

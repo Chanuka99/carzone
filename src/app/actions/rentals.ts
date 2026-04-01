@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { logActivity } from '@/app/actions/activity';
 import { Rental } from '@/types';
 
 export async function getRentals(params?: {
@@ -147,13 +148,20 @@ export async function createRental(data: {
 
   revalidatePath('/rentals');
   revalidatePath('/dashboard');
+  await logActivity({
+    action: 'created',
+    module: 'Rentals',
+    entity_id: rental.id,
+    entity_label: rental.rental_number || `Rental #${rental.id.slice(0,8)}`,
+    details: `Status: ${rental.status}`,
+  });
   return { data: rental };
 }
 
 export async function activateRental(rentalId: string, pickupKm: number) {
   await requireAuth();
 
-  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id').eq('id', rentalId).single();
+  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id, rental_number').eq('id', rentalId).single();
   if (!rental) return { error: 'Rental not found' };
 
   await supabaseAdmin.from('rentals').update({ status: 'active', pickup_km: pickupKm }).eq('id', rentalId);
@@ -161,6 +169,13 @@ export async function activateRental(rentalId: string, pickupKm: number) {
 
   revalidatePath('/rentals');
   revalidatePath('/dashboard');
+  await logActivity({
+    action: 'activated',
+    module: 'Rentals',
+    entity_id: rentalId,
+    entity_label: rental.rental_number,
+    details: `Pickup KM: ${pickupKm}`,
+  });
   return { success: true };
 }
 
@@ -172,7 +187,7 @@ export async function returnRental(rentalId: string, data: {
 }) {
   await requireAuth();
 
-  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id, daily_rate, subtotal, additional_charges, discount').eq('id', rentalId).single();
+  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id, rental_number, daily_rate, subtotal, additional_charges, discount').eq('id', rentalId).single();
   if (!rental) return { error: 'Rental not found' };
 
   const extra = data.additional_charges ?? 0;
@@ -187,10 +202,9 @@ export async function returnRental(rentalId: string, data: {
     return_notes: data.return_notes ?? null,
   }).eq('id', rentalId);
 
-  // Get service interval from company settings
   const { data: settings } = await supabaseAdmin.from('company_settings').select('service_interval_km').single();
   const interval = settings?.service_interval_km ?? 5000;
-  
+
   await supabaseAdmin.from('vehicles').update({
     status: 'available',
     current_km: data.return_km,
@@ -199,6 +213,13 @@ export async function returnRental(rentalId: string, data: {
 
   revalidatePath('/rentals');
   revalidatePath('/dashboard');
+  await logActivity({
+    action: 'returned',
+    module: 'Rentals',
+    entity_id: rentalId,
+    entity_label: rental.rental_number,
+    details: `Return KM: ${data.return_km}`,
+  });
   return { success: true };
 }
 
@@ -235,14 +256,24 @@ export async function exchangeVehicle(data: {
   await supabaseAdmin.from('vehicles').update({ status: 'available' }).eq('id', data.old_vehicle_id);
   await supabaseAdmin.from('vehicles').update({ status: 'rented' }).eq('id', data.new_vehicle_id);
 
+  // Fetch rental number for log
+  const { data: r } = await supabaseAdmin.from('rentals').select('rental_number').eq('id', data.rental_id).single();
+
   revalidatePath('/rentals');
+  await logActivity({
+    action: 'exchanged',
+    module: 'Rentals',
+    entity_id: data.rental_id,
+    entity_label: r?.rental_number ?? data.rental_id,
+    details: `Vehicle exchanged${data.reason ? ': ' + data.reason : ''}`,
+  });
   return { success: true };
 }
 
 export async function cancelRental(rentalId: string) {
   await requireAuth();
 
-  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id').eq('id', rentalId).single();
+  const { data: rental } = await supabaseAdmin.from('rentals').select('vehicle_id, rental_number').eq('id', rentalId).single();
   if (!rental) return { error: 'Rental not found' };
 
   await supabaseAdmin.from('rentals').update({ status: 'cancelled' }).eq('id', rentalId);
@@ -250,5 +281,11 @@ export async function cancelRental(rentalId: string) {
 
   revalidatePath('/rentals');
   revalidatePath('/dashboard');
+  await logActivity({
+    action: 'cancelled',
+    module: 'Rentals',
+    entity_id: rentalId,
+    entity_label: rental.rental_number,
+  });
   return { success: true };
 }

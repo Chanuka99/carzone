@@ -123,6 +123,9 @@ export interface Guarantor {
   address?: string;
   relationship?: string;
   notes?: string;
+  nic_front_url?: string;
+  nic_back_url?: string;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 }

@@ -1,19 +1,24 @@
 import { getVehicleById } from "@/app/actions/vehicles";
 import { getSuppliers } from "@/app/actions/suppliers";
+import { getRentals } from "@/app/actions/rentals";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Edit, Trash2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import StatusBadge from "@/components/shared/StatusBadge";
 import ServiceAlertBadge from "@/components/shared/ServiceAlertBadge";
-import { formatCurrency, formatDate } from "@/lib/utils";
 import VehicleDetailClient from "./VehicleDetailClient";
 
 export default async function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const p = await params;
-  const vehicle = await getVehicleById(p.id);
+  const [vehicle, { data: suppliers }, { data: rentals }] = await Promise.all([
+    getVehicleById(p.id),
+    getSuppliers({ pageSize: 100 }),
+    getRentals({ vehicleReg: "", pageSize: 100 }),
+  ]);
   if (!vehicle) notFound();
 
-  const { data: suppliers } = await getSuppliers({ pageSize: 100 });
+  // Filter rentals for this vehicle
+  const vehicleRentals = (rentals ?? []).filter((r: any) => r.vehicle_id === p.id);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -29,7 +34,7 @@ export default async function VehicleDetailPage({ params }: { params: Promise<{ 
         <StatusBadge status={vehicle.status} />
       </div>
 
-      <VehicleDetailClient vehicle={vehicle} suppliers={suppliers} />
+      <VehicleDetailClient vehicle={vehicle} suppliers={suppliers} rentals={vehicleRentals as any} />
     </div>
   );
 }
