@@ -62,7 +62,7 @@ export async function updateUser(id: string, formData: FormData) {
   // Sync session name if modifying own profile
   const session = await getSession();
   if (session && session.id === id) {
-    const newSession = { ...session, full_name: updates.full_name as string, role: updates.role as string };
+    const newSession = { ...session, full_name: updates.full_name as string, role: updates.role as any };
     const cookieStore = await cookies();
     cookieStore.set('cz_session', createSessionToken(newSession), {
       httpOnly: true, secure: process.env.NODE_ENV === 'production',
