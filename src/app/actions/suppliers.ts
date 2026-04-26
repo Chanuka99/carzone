@@ -10,6 +10,7 @@ import { buildDiff } from '@/lib/diff';
 const SUPPLIER_FIELDS: Record<string, string> = {
   name: 'Name', phone: 'Phone', phone2: 'Phone 2',
   email: 'Email', address: 'Address', nic: 'NIC', notes: 'Notes',
+  bank: 'Bank', account_number: 'Account Number', branch: 'Branch',
 };
 
 const GUARANTOR_FIELDS: Record<string, string> = {
@@ -43,7 +44,6 @@ function buildSupplierPayload(formData: FormData) {
   // FileUploader always emits hidden input — empty string means deleted → null in DB
   const nic_front_url = (formData.get('nic_front_url') as string) || null;
   const nic_back_url = (formData.get('nic_back_url') as string) || null;
-  const photo_url = (formData.get('supplier_photo_url') as string) || (formData.get('photo_url') as string) || null;
 
   return {
     name: formData.get('name') as string,
@@ -52,11 +52,13 @@ function buildSupplierPayload(formData: FormData) {
     email: formData.get('email') as string || null,
     address: formData.get('address') as string || null,
     nic: formData.get('nic') as string || null,
+    bank: formData.get('bank') as string || null,
+    account_number: formData.get('account_number') as string || null,
+    branch: formData.get('branch') as string || null,
     notes: formData.get('notes') as string || null,
     // Always include — null clears the DB column (persists deletion)
     nic_front_url,
     nic_back_url,
-    photo_url,
   };
 }
 
@@ -92,7 +94,7 @@ export async function updateSupplier(id: string, formData: FormData) {
   // Fetch current record and clean up old storage files
   const { data: current } = await supabaseAdmin
     .from('suppliers')
-    .select('name, phone, phone2, email, address, nic, notes, nic_front_url, nic_back_url, photo_url')
+    .select('name, phone, phone2, email, address, nic, notes, bank, account_number, branch, nic_front_url, nic_back_url')
     .eq('id', id)
     .single();
 
@@ -100,7 +102,6 @@ export async function updateSupplier(id: string, formData: FormData) {
     await Promise.all([
       deleteOldStorageFile(current.nic_front_url, payload.nic_front_url ?? null),
       deleteOldStorageFile(current.nic_back_url, payload.nic_back_url ?? null),
-      deleteOldStorageFile(current.photo_url, payload.photo_url ?? null),
     ]);
   }
 
@@ -166,6 +167,7 @@ function buildGuarantorPayload(formData: FormData) {
   const nic_front_url = (formData.get('nic_front_url') as string) || null;
   const nic_back_url = (formData.get('nic_back_url') as string) || null;
   const photo_url = (formData.get('photo_url') as string) || null;
+  const utility_bill_url = (formData.get('utility_bill_url') as string) || null;
 
   return {
     customer_id: formData.get('customer_id') as string || null,
@@ -180,6 +182,7 @@ function buildGuarantorPayload(formData: FormData) {
     nic_front_url,
     nic_back_url,
     photo_url,
+    utility_bill_url,
   };
 }
 
@@ -214,7 +217,7 @@ export async function updateGuarantor(id: string, formData: FormData) {
   // Fetch current record and clean up old storage files
   const { data: current } = await supabaseAdmin
     .from('guarantors')
-    .select('name, nic, phone, phone2, address, relationship, notes, nic_front_url, nic_back_url, photo_url')
+    .select('name, nic, phone, phone2, address, relationship, notes, nic_front_url, nic_back_url, photo_url, utility_bill_url')
     .eq('id', id)
     .single();
 
@@ -223,6 +226,7 @@ export async function updateGuarantor(id: string, formData: FormData) {
       deleteOldStorageFile(current.nic_front_url, payload.nic_front_url ?? null),
       deleteOldStorageFile(current.nic_back_url, payload.nic_back_url ?? null),
       deleteOldStorageFile(current.photo_url, payload.photo_url ?? null),
+      deleteOldStorageFile(current.utility_bill_url, payload.utility_bill_url ?? null),
     ]);
   }
 

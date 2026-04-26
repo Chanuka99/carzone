@@ -108,14 +108,14 @@ export default function VehiclesClient({ vehicles, total, currentPage }: Vehicle
                 <td className="text-blue-600 font-medium">{v.brand}</td>
                 <td>{v.model}</td>
                 <td>{v.year ?? "—"}</td>
-                <td><StatusBadge status={v.type.toLowerCase()} /></td>
-                <td><StatusBadge status={v.source.toLowerCase()} /></td>
+                <td><StatusBadge status={v.type?.toLowerCase() || "unknown"} /></td>
+                <td><StatusBadge status={v.source?.toLowerCase() || "unknown"} /></td>
                 <td className="font-medium">{formatCurrency(v.daily_rate)}</td>
-                <td className="text-gray-500">{v.current_km.toLocaleString()} km</td>
+                <td className="text-gray-500">{(v.current_km || 0).toLocaleString()} km</td>
                 <td>
                   <ServiceAlertBadge
-                    currentKm={v.current_km}
-                    nextServiceKm={v.next_service_km}
+                    currentKm={v.current_km || 0}
+                    nextServiceKm={v.next_service_km || 0}
                     nextServiceDate={v.next_service_date}
                   />
                 </td>

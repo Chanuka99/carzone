@@ -7,6 +7,7 @@ import { Search, Plus, Edit, Trash2, Loader2, Car, Eye } from "lucide-react";
 import { Supplier } from "@/types";
 import { createSupplier, updateSupplier, deleteSupplier } from "@/app/actions/suppliers";
 import PasswordConfirmModal from "@/components/shared/PasswordConfirmModal";
+import { BANKS } from "@/lib/vehicleData";
 
 export default function SuppliersClient({
   suppliers,
@@ -21,8 +22,6 @@ export default function SuppliersClient({
   const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,24 +29,6 @@ export default function SuppliersClient({
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    // Combine first + last name into `name`
-    const firstName = (fd.get("first_name") as string ?? "").trim();
-    const lastName = (fd.get("last_name") as string ?? "").trim();
-    fd.set("name", [firstName, lastName].filter(Boolean).join(" "));
-    startTransition(async () => {
-      const result = editSupplier
-        ? await updateSupplier(editSupplier.id, fd)
-        : await createSupplier(fd);
-      if ("error" in result && result.error) { setError(result.error); return; }
-      setShowForm(false);
-      setEditSupplier(null);
-      router.refresh();
-    });
   }
 
   async function handleDelete() {
@@ -81,70 +62,10 @@ export default function SuppliersClient({
           />
         </div>
         {isPending && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
-        <button
-          onClick={() => { setEditSupplier(null); setShowForm(true); }}
-          className="btn-primary ml-auto"
-        >
+        <Link href="/suppliers/new" className="btn-primary ml-auto">
           <Plus className="w-4 h-4" /> Add Supplier
-        </button>
+        </Link>
       </div>
-
-      {/* Inline Add/Edit Form */}
-      {(showForm || editSupplier) && (
-        <div className="border-b border-gray-100 p-5 bg-blue-50/30">
-          <h3 className="text-sm font-semibold mb-4">{editSupplier ? "Edit Supplier" : "Add Supplier"}</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="form-label text-xs">First Name <span className="text-red-500">*</span></label>
-              <input
-                name="first_name"
-                required
-                defaultValue={editSupplier ? splitName(editSupplier.name)[0] : ""}
-                className="form-input text-sm"
-                placeholder="John"
-              />
-            </div>
-            <div>
-              <label className="form-label text-xs">Last Name</label>
-              <input
-                name="last_name"
-                defaultValue={editSupplier ? splitName(editSupplier.name)[1] : ""}
-                className="form-input text-sm"
-                placeholder="Perera"
-              />
-            </div>
-            {[
-              { name: "phone", label: "Phone", defaultValue: editSupplier?.phone },
-              { name: "phone2", label: "Phone 2", defaultValue: editSupplier?.phone2 },
-              { name: "email", label: "Email", defaultValue: editSupplier?.email },
-              { name: "nic", label: "NIC", defaultValue: editSupplier?.nic },
-              { name: "address", label: "Address", defaultValue: editSupplier?.address },
-              { name: "notes", label: "Notes", defaultValue: editSupplier?.notes },
-            ].map(f => (
-              <div key={f.name}>
-                <label className="form-label text-xs">{f.label}</label>
-                <input name={f.name} defaultValue={f.defaultValue ?? ""} className="form-input text-sm" />
-              </div>
-            ))}
-
-            {/* NIC Upload (2 files: front + back) */}
-            <div>
-              <label className="form-label text-xs">NIC — Front (image)</label>
-              <input name="nic_front" type="file" accept="image/*,.pdf" className="form-input text-sm h-auto py-1.5" />
-            </div>
-            <div>
-              <label className="form-label text-xs">NIC — Back (image)</label>
-              <input name="nic_back" type="file" accept="image/*,.pdf" className="form-input text-sm h-auto py-1.5" />
-            </div>
-
-            {error && <p className="col-span-3 text-sm text-red-600">{error}</p>}
-            <div className="col-span-3 flex gap-3 justify-end">
-              <button type="button" onClick={() => { setShowForm(false); setEditSupplier(null); }} className="btn-secondary text-sm">Cancel</button>
-              <button type="submit" disabled={isPending} className="btn-primary text-sm">Save</button>
-            </div>
-          </form>
-        </div>
-      )}
 
       {/* Table */}
       <div className="overflow-x-auto">

@@ -20,8 +20,6 @@ export default function CustomersClient({ customers, total, currentPage }: Custo
   const pathname = usePathname();
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
-  const [showForm, setShowForm] = useState(false);
-  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,25 +41,12 @@ export default function CustomersClient({ customers, total, currentPage }: Custo
       const result = await getCustomerByNic(nicSearch);
       setNicLookup(result ?? null);
       if (result) {
-        // Auto-fill by opening edit form
-        setEditCustomer(result);
-        setShowForm(false);
+        // Navigate to the customer detail page
+        router.push(`/customers/${result.id}`);
       }
     } finally {
       setNicSearching(false);
     }
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    startTransition(async () => {
-      const result = editCustomer ? await updateCustomer(editCustomer.id, fd) : await createCustomer(fd);
-      if ("error" in result && result.error) { setError(result.error); return; }
-      setShowForm(false);
-      setEditCustomer(null);
-      router.refresh();
-    });
   }
 
   async function handleDelete() {
@@ -104,55 +89,11 @@ export default function CustomersClient({ customers, total, currentPage }: Custo
             onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === "Enter" && applySearch()} />
         </div>
         {isPending && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
-        <button onClick={() => { setEditCustomer(null); setShowForm(true); }} className="btn-primary ml-auto">
+        <Link href="/customers/new" className="btn-primary ml-auto">
           <Plus className="w-4 h-4" /> Add Customer
-        </button>
+        </Link>
       </div>
 
-      {/* Inline form */}
-      {(showForm || editCustomer) && (
-        <div className="border-b border-gray-100 p-5 bg-blue-50/30">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">{editCustomer ? "Edit Customer" : "Add New Customer"}</h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { name: "name", label: "Full Name", required: true, defaultValue: editCustomer?.name },
-              { name: "nic", label: "NIC", defaultValue: editCustomer?.nic },
-              { name: "phone", label: "Phone", defaultValue: editCustomer?.phone },
-              { name: "phone2", label: "Phone 2", defaultValue: editCustomer?.phone2 },
-              { name: "email", label: "Email", type: "email", defaultValue: editCustomer?.email },
-              { name: "address", label: "Address", defaultValue: editCustomer?.address },
-              { name: "license_number", label: "License Number", defaultValue: editCustomer?.license_number },
-              { name: "license_expiry", label: "License Expiry", type: "date", defaultValue: editCustomer?.license_expiry },
-              { name: "notes", label: "Notes", defaultValue: editCustomer?.notes },
-            ].map(f => (
-              <div key={f.name}>
-                <label className="form-label text-xs">{f.label}{f.required && <span className="text-red-500">*</span>}</label>
-                <input name={f.name} type={f.type ?? "text"} required={f.required} defaultValue={f.defaultValue ?? ""} className="form-input text-sm" />
-              </div>
-            ))}
-
-            {/* Document uploads */}
-            <div>
-              <label className="form-label text-xs">NIC — Front</label>
-              <input name="nic_front" type="file" accept="image/*,.pdf" className="form-input text-sm h-auto py-1.5" />
-            </div>
-            <div>
-              <label className="form-label text-xs">NIC — Back</label>
-              <input name="nic_back" type="file" accept="image/*,.pdf" className="form-input text-sm h-auto py-1.5" />
-            </div>
-            <div>
-              <label className="form-label text-xs">Photo</label>
-              <input name="photo" type="file" accept="image/*" className="form-input text-sm h-auto py-1.5" />
-            </div>
-
-            {error && <p className="col-span-3 text-sm text-red-600">{error}</p>}
-            <div className="col-span-3 flex gap-3 justify-end mt-1">
-              <button type="button" onClick={() => { setShowForm(false); setEditCustomer(null); setError(null); }} className="btn-secondary text-sm">Cancel</button>
-              <button type="submit" disabled={isPending} className="btn-primary text-sm">{isPending ? "Saving..." : "Save"}</button>
-            </div>
-          </form>
-        </div>
-      )}
 
       <div className="overflow-x-auto">
         <table className="data-table">

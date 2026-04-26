@@ -215,6 +215,9 @@ export default function CustomerDetailClient({ customer, rentals }: { customer: 
                   <ImageCard label="NIC Front" url={customer.nic_front_url} />
                   <ImageCard label="NIC Back" url={customer.nic_back_url} />
                   <ImageCard label="Customer Photo" url={customer.photo_url} />
+                  <ImageCard label="Utility Bill" url={customer.utility_bill_url} />
+                  <ImageCard label="License Front" url={customer.driving_license_front_url} />
+                  <ImageCard label="License Back" url={customer.driving_license_back_url} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3 pt-2">
@@ -319,9 +322,12 @@ export default function CustomerDetailClient({ customer, rentals }: { customer: 
           <div className="md:col-span-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 border-t border-gray-100 pt-4">Documents & Photos</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <FileUploader label="NIC Front" fieldName="nic_front" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.nic_front_url ? [{ url: customer.nic_front_url, path: customer.nic_front_url }] : []} />
-              <FileUploader label="NIC Back" fieldName="nic_back" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.nic_back_url ? [{ url: customer.nic_back_url, path: customer.nic_back_url }] : []} />
-              <FileUploader label="Customer Photo" fieldName="customer_photo" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.photo_url ? [{ url: customer.photo_url, path: customer.photo_url }] : []} />
+              <FileUploader label="NIC Front (JPG/PDF, max 5MB)" fieldName="nic_front" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.nic_front_url ? [{ url: customer.nic_front_url, path: customer.nic_front_path || customer.nic_front_url }] : []} />
+              <FileUploader label="NIC Back (JPG/PDF, max 5MB)" fieldName="nic_back" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.nic_back_url ? [{ url: customer.nic_back_url, path: customer.nic_back_path || customer.nic_back_url }] : []} />
+              <FileUploader label="Customer Photo (JPG/PNG, max 5MB)" fieldName="photo" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.photo_url ? [{ url: customer.photo_url, path: customer.photo_path || customer.photo_url }] : []} />
+              <FileUploader label="Utility Bill (JPG/PDF, max 5MB)" fieldName="utility_bill" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.utility_bill_url ? [{ url: customer.utility_bill_url, path: customer.utility_bill_path || customer.utility_bill_url }] : []} />
+              <FileUploader label="License Image Front (JPG/PDF, max 5MB)" fieldName="driving_license_front" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.driving_license_front_url ? [{ url: customer.driving_license_front_url, path: customer.driving_license_front_path || customer.driving_license_front_url }] : []} />
+              <FileUploader label="License Image Back (JPG/PDF, max 5MB)" fieldName="driving_license_back" bucket="customers" folder={customer.id} maxFiles={1} initialFiles={customer.driving_license_back_url ? [{ url: customer.driving_license_back_url, path: customer.driving_license_back_path || customer.driving_license_back_url }] : []} />
             </div>
           </div>
           {error && <p className="md:col-span-3 text-sm text-red-600">{error}</p>}

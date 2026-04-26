@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import FileUploader from "@/components/shared/FileUploader";
 import EditModal from "@/components/shared/EditModal";
 import PasswordConfirmModal from "@/components/shared/PasswordConfirmModal";
+import { BANKS } from "@/lib/vehicleData";
 
 function ImageCard({ label, url }: { label: string; url?: string | null }) {
   return (
@@ -131,12 +132,31 @@ export default function SupplierDetailClient({ supplier, vehicles }: { supplier:
                   <p className="text-sm text-gray-600 bg-gray-50 px-4 py-3 rounded-lg">{supplier.notes}</p>
                 </div>
               )}
+              
+              {/* Bank Details Section */}
+              {(supplier.bank || supplier.account_number || supplier.branch) && (
+                <div className="border-t border-gray-100 pt-6">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Bank Details</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {[
+                      { label: "Bank", value: supplier.bank ?? "—" },
+                      { label: "Account Number", value: supplier.account_number ?? "—" },
+                      { label: "Branch", value: supplier.branch ?? "—" },
+                    ].map(f => (
+                      <div key={f.label}>
+                        <p className="text-xs text-gray-400 mb-0.5">{f.label}</p>
+                        <p className="text-sm font-medium text-gray-900">{f.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Documents & Photos</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 border-t border-gray-100 pt-6">Documents & Photos</p>
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                   <ImageCard label="NIC Front" url={supplier.nic_front_url} />
                   <ImageCard label="NIC Back" url={supplier.nic_back_url} />
-                  <ImageCard label="Supplier Photo" url={supplier.photo_url} />
                 </div>
               </div>
             </div>
@@ -264,16 +284,33 @@ export default function SupplierDetailClient({ supplier, vehicles }: { supplier:
               <input name={f.name} defaultValue={f.defaultValue ?? ""} className="form-input text-sm" />
             </div>
           ))}
+          
+          {/* Bank Details Section */}
+          <div>
+            <label className="form-label text-xs">Bank</label>
+            <select name="bank" defaultValue={supplier.bank ?? ""} className="form-select text-sm">
+              <option value="">— Select Bank —</option>
+              {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="form-label text-xs">Account Number</label>
+            <input name="account_number" type="text" defaultValue={supplier.account_number ?? ""} className="form-input text-sm" />
+          </div>
+          <div>
+            <label className="form-label text-xs">Branch</label>
+            <input name="branch" defaultValue={supplier.branch ?? ""} className="form-input text-sm" />
+          </div>
+          
           <div className="md:col-span-3">
             <label className="form-label text-xs">Notes</label>
             <textarea name="notes" defaultValue={supplier.notes ?? ""} className="form-input text-sm resize-none h-20" />
           </div>
           <div className="md:col-span-3">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 border-t border-gray-100 pt-4">Documents & Photos</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <FileUploader label="NIC Front" fieldName="nic_front" bucket="suppliers" folder={supplier.id} maxFiles={1} initialFiles={supplier.nic_front_url ? [{ url: supplier.nic_front_url, path: supplier.nic_front_url }] : []} />
-              <FileUploader label="NIC Back" fieldName="nic_back" bucket="suppliers" folder={supplier.id} maxFiles={1} initialFiles={supplier.nic_back_url ? [{ url: supplier.nic_back_url, path: supplier.nic_back_url }] : []} />
-              <FileUploader label="Supplier Photo" fieldName="supplier_photo" bucket="suppliers" folder={supplier.id} maxFiles={1} initialFiles={supplier.photo_url ? [{ url: supplier.photo_url, path: supplier.photo_url }] : []} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <FileUploader label="NIC Front (JPG/PNG/PDF, max 5MB)" fieldName="nic_front" bucket="suppliers" folder={supplier.id} maxFiles={1} initialFiles={supplier.nic_front_url ? [{ url: supplier.nic_front_url, path: supplier.nic_front_url }] : []} />
+              <FileUploader label="NIC Back (JPG/PNG/PDF, max 5MB)" fieldName="nic_back" bucket="suppliers" folder={supplier.id} maxFiles={1} initialFiles={supplier.nic_back_url ? [{ url: supplier.nic_back_url, path: supplier.nic_back_url }] : []} />
             </div>
           </div>
           {error && <p className="md:col-span-3 text-sm text-red-600">{error}</p>}

@@ -202,6 +202,24 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
   const [editBrand, setEditBrand] = useState(vehicle.brand || "Toyota");
   const [editModel, setEditModel] = useState(vehicle.model || "Corolla");
   const availableModels = getModels(editBrand);
+  const [editSource, setEditSource] = useState<"Company" | "Supplier">(
+    (vehicle.source as "Company" | "Supplier") || "Company"
+  );
+  const [editPayFreq, setEditPayFreq] = useState(vehicle.payment_frequency || "1_month");
+  const [editPayDays, setEditPayDays] = useState(vehicle.payment_days || "");
+
+  function calcPayDays(freq: string): string {
+    const today = new Date();
+    const d1 = new Date(today); d1.setDate(today.getDate() + 15);
+    const d2 = new Date(today); d2.setDate(today.getDate() + 30);
+    if (freq === "15_days") return `${d1.getDate()},${d2.getDate()}`;
+    return `${d2.getDate()}`;
+  }
+
+  function handleEditPayFreqChange(freq: string) {
+    setEditPayFreq(freq);
+    setEditPayDays(calcPayDays(freq));
+  }
 
   function handleEditBrandChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newBrand = e.target.value;
@@ -271,7 +289,7 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
 
           {/* ── DETAILS ── */}
           <TabsContent value="details" className="mt-0">
-            <div className="p-5">
+            <div className="p-5 space-y-6">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
                   { label: "Registration", value: <span className="font-bold text-blue-600">{vehicle.reg_number}</span> },
@@ -279,14 +297,14 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
                   { label: "Model", value: vehicle.model },
                   { label: "Year", value: vehicle.year?.toString() ?? "—" },
                   { label: "Color", value: vehicle.color ?? "—" },
-                  { label: "Type", value: <StatusBadge status={vehicle.type.toLowerCase()} /> },
-                  { label: "Source", value: <StatusBadge status={vehicle.source.toLowerCase()} /> },
+                  { label: "Type", value: <StatusBadge status={vehicle.type?.toLowerCase() || "unknown"} /> },
+                  { label: "Source", value: <StatusBadge status={vehicle.source?.toLowerCase() || "unknown"} /> },
                   { label: "Supplier", value: vehicle.supplier?.name ?? "—" },
                   { label: "Fuel Type", value: vehicle.fuel_type ?? "—" },
                   { label: "Transmission", value: vehicle.transmission ?? "—" },
                   { label: "Status", value: <StatusBadge status={vehicle.status} /> },
-                  { label: "Current KM", value: vehicle.current_km.toLocaleString() + " km" },
-                  { label: "Next Service KM", value: vehicle.next_service_km.toLocaleString() + " km" },
+                  { label: "Current KM", value: (vehicle.current_km || 0).toLocaleString() + " km" },
+                  { label: "Next Service KM", value: (vehicle.next_service_km || 0).toLocaleString() + " km" },
                   { label: "Daily Rate", value: formatCurrency(vehicle.daily_rate) },
                 ].map(f => (
                   <div key={f.label}>
@@ -295,8 +313,141 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
                   </div>
                 ))}
               </div>
+
+              {/* Supplier Bank Details */}
+              {vehicle.supplier && (vehicle.supplier.bank || vehicle.supplier.account_number || vehicle.supplier.branch) && (
+                <div className="border-t border-gray-100 pt-6">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Supplier Bank Details</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                    {[
+                      { label: "Bank", value: vehicle.supplier.bank ?? "—" },
+                      { label: "Account Number", value: vehicle.supplier.account_number ?? "—" },
+                      { label: "Branch", value: vehicle.supplier.branch ?? "—" },
+                    ].map(f => (
+                      <div key={f.label}>
+                        <p className="text-xs text-gray-500 mb-0.5">{f.label}</p>
+                        <p className="text-sm font-medium text-gray-900">{f.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Schedule — supplier vehicles only */}
+              {vehicle.source === "Supplier" && vehicle.payment_days && (
+                <div className="border-t border-gray-100 pt-6">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Payment Schedule</p>
+                  <div className="bg-amber-50 rounded-lg border border-amber-200 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Monthly Cost</span>
+                      <span className="text-sm font-bold text-gray-900">{vehicle.monthly_cost ? formatCurrency(vehicle.monthly_cost) : '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Frequency</span>
+                      <span className="text-sm font-medium text-gray-700">{vehicle.payment_frequency === '15_days' ? '15 Days (2x/month)' : '1 Month'}</span>
+                    </div>
+                    <div className="border-t border-amber-200 pt-3">
+                      <p className="text-xs text-gray-500 mb-2">Payment Days</p>
+                      <div className="space-y-1.5">
+                        {(vehicle.payment_days || "").split(",").map((day, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white rounded px-3 py-2 border border-amber-100">
+                            <span className="text-sm font-medium text-gray-800">📋 Day {day.trim()} of every month</span>
+                            <span className="text-sm font-semibold text-amber-700">
+                              {vehicle.monthly_cost
+                                ? formatCurrency(vehicle.payment_frequency === '15_days' ? vehicle.monthly_cost / 2 : vehicle.monthly_cost)
+                                : '—'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Vehicle Documents */}
+              <div className="border-t border-gray-100 pt-6">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Vehicle Documents</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Registration Document */}
+                  {vehicle.registration_document_url ? (
+                    <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Registration Document</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.registration_document_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.registration_document_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500">No registration document</p>
+                    </div>
+                  )}
+
+                  {/* Revenue License */}
+                  {vehicle.revenue_license_url ? (
+                    <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Revenue License</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.revenue_license_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.revenue_license_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500">No revenue license</p>
+                    </div>
+                  )}
+
+                  {/* Eco Test */}
+                  {vehicle.eco_test_url ? (
+                    <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Eco Test</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.eco_test_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.eco_test_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500">No eco test document</p>
+                    </div>
+                  )}
+
+                  {/* Insurance */}
+                  {vehicle.insurance_url ? (
+                    <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Insurance</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.insurance_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.insurance_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500">No insurance document</p>
+                    </div>
+                  )}
+
+                  {/* Service Tag */}
+                  {vehicle.service_tag_url ? (
+                    <div className="flex items-center gap-3 bg-green-50 rounded-lg border border-green-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Service Tag</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.service_tag_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.service_tag_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500">No service tag document</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {vehicle.notes && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="border-t border-gray-100 pt-6">
                   <p className="text-xs text-gray-400 mb-1">Notes</p>
                   <p className="text-sm text-gray-600">{vehicle.notes}</p>
                 </div>
@@ -306,32 +457,122 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
 
           {/* ── IMAGES ── */}
           <TabsContent value="images" className="mt-0">
-            <div className="p-5">
-              {localPhotos.length === 0 ? (
-                <div className="flex flex-col items-center py-12 text-gray-300">
-                  <ImageIcon className="w-10 h-10 mb-2" />
-                  <p className="text-sm text-gray-400">No photos yet.</p>
-                  <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs mt-3">
-                    <Edit className="w-3.5 h-3.5" /> Edit to Add Photos
-                  </button>
+            <div className="p-5 space-y-6">
+              {/* Vehicle Documents */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Vehicle Documents</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Registration Document */}
+                  {vehicle.registration_document_url ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Registration Document</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.registration_document_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.registration_document_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-2">No registration document</p>
+                      <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs">Add Document</button>
+                    </div>
+                  )}
+
+                  {/* Revenue License */}
+                  {vehicle.revenue_license_url ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Revenue License</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.revenue_license_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.revenue_license_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-2">No revenue license</p>
+                      <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs">Add Document</button>
+                    </div>
+                  )}
+
+                  {/* Eco Test */}
+                  {vehicle.eco_test_url ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Eco Test</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.eco_test_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.eco_test_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-2">No eco test document</p>
+                      <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs">Add Document</button>
+                    </div>
+                  )}
+
+                  {/* Insurance */}
+                  {vehicle.insurance_url ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Insurance</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.insurance_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.insurance_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-2">No insurance document</p>
+                      <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs">Add Document</button>
+                    </div>
+                  )}
+
+                  {/* Service Tag */}
+                  {vehicle.service_tag_url ? (
+                    <div className="flex items-center gap-3 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">Service Tag</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{vehicle.service_tag_url.split('/').pop()}</p>
+                      </div>
+                      <a href={vehicle.service_tag_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs">View Document</a>
+                    </div>
+                  ) : (
+                    <div className="w-full border border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-2">No service tag document</p>
+                      <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs">Add Document</button>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {localPhotos.map((p: any) => (
-                      <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="block group">
-                        <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
-                          <img src={p.url} alt="Vehicle" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium bg-black/50 px-2 py-1 rounded transition-opacity">View Full</span>
-                          </div>
-                        </div>
-                      </a>
-                    ))}
+              </div>
+
+              {/* Vehicle Photos */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Vehicle Photos</p>
+                {localPhotos.length === 0 ? (
+                  <div className="flex flex-col items-center py-12 text-gray-300">
+                    <ImageIcon className="w-10 h-10 mb-2" />
+                    <p className="text-sm text-gray-400">No photos yet.</p>
+                    <button onClick={() => { setError(null); setEditing(true); }} className="btn-secondary text-xs mt-3">
+                      <Edit className="w-3.5 h-3.5" /> Edit to Add Photos
+                    </button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-3 text-center">Click <strong>Edit</strong> to add or remove photos.</p>
-                </>
-              )}
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {localPhotos.map((p: any) => (
+                        <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="block group">
+                          <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-gray-100 bg-gray-50">
+                            <img src={p.url} alt="Vehicle" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                              <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-medium bg-black/50 px-2 py-1 rounded transition-opacity">View Full</span>
+                            </div>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3 text-center">Click <strong>Edit</strong> to add or remove photos.</p>
+                  </>
+                )}
+              </div>
             </div>
           </TabsContent>
 
@@ -344,6 +585,7 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
                   {[
                     { label: "Insurance Expiry", value: vehicle.insurance_expiry, icon: "🛡️" },
                     { label: "Revenue License Expiry", value: vehicle.revenue_license_expiry, icon: "📋" },
+                    { label: "Eco Test Expiry", value: vehicle.eco_test_expiry, icon: "🍃" },
                   ].map(item => {
                     const isExpired = item.value && new Date(item.value) < new Date();
                     const isSoon = item.value && !isExpired && (new Date(item.value).getTime() - Date.now()) < 30 * 86400000;
@@ -373,7 +615,7 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
                     { label: "Last Service Date", value: formatDate(vehicle.last_service_date) },
                     { label: "Last Service KM", value: vehicle.last_service_km ? vehicle.last_service_km.toLocaleString() + " km" : "—" },
                     { label: "Next Service Date", value: formatDate(vehicle.next_service_date) },
-                    { label: "Next Service KM", value: vehicle.next_service_km.toLocaleString() + " km" },
+                    { label: "Next Service KM", value: vehicle.next_service_km ? vehicle.next_service_km.toLocaleString() + " km" : "—" },
                   ].map(f => (
                     <div key={f.label} className="bg-gray-50 rounded-xl p-4">
                       <p className="text-xs text-gray-500 mb-0.5">{f.label}</p>
@@ -512,8 +754,8 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
             </div>
             {[
               { name: "daily_rate", label: "Daily Rate (LKR)", defaultValue: vehicle.daily_rate.toString(), type: "number", required: true },
-              { name: "current_km", label: "Current KM", defaultValue: vehicle.current_km.toString(), type: "number" },
-              { name: "next_service_km", label: "Next Service KM", defaultValue: vehicle.next_service_km.toString(), type: "number" },
+              { name: "current_km", label: "Current KM", defaultValue: (vehicle.current_km || "").toString(), type: "number" },
+              { name: "next_service_km", label: "Next Service KM", defaultValue: (vehicle.next_service_km || "").toString(), type: "number" },
             ].map(f => (
               <div key={f.name}>
                 <label className="form-label text-sm">{f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}</label>
@@ -537,7 +779,7 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
             </div>
             <div>
               <label className="form-label text-sm">Source</label>
-              <select name="source" defaultValue={vehicle.source} className="form-select text-sm">
+              <select name="source" value={editSource} onChange={e => setEditSource(e.target.value as "Company" | "Supplier")} className="form-select text-sm">
                 <option value="Company">Company</option>
                 <option value="Supplier">Supplier</option>
               </select>
@@ -549,6 +791,39 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
+            {/* Supplier Payment Fields */}
+            {editSource === "Supplier" && (
+              <>
+                <div>
+                  <label className="form-label text-sm">Monthly Cost (Rs.)</label>
+                  <input name="monthly_cost" type="number" min="0" step="0.01" defaultValue={vehicle.monthly_cost ?? ""} className="form-input text-sm" />
+                </div>
+                <div>
+                  <label className="form-label text-sm">Payment Frequency</label>
+                  <select
+                    name="payment_frequency"
+                    className="form-select text-sm"
+                    value={editPayFreq}
+                    onChange={e => handleEditPayFreqChange(e.target.value)}
+                  >
+                    <option value="1_month">1 Month</option>
+                    <option value="15_days">15 Days</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label text-sm">Payment Day(s) of Month</label>
+                  <input
+                    name="payment_days"
+                    type="text"
+                    value={editPayDays}
+                    onChange={e => setEditPayDays(e.target.value)}
+                    placeholder="e.g. 15,30"
+                    className="form-input text-sm"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Auto-filled when frequency changes. You can also edit manually.</p>
+                </div>
+              </>
+            )}
             <div>
               <label className="form-label text-sm">Next Service Date</label>
               <input name="next_service_date" type="date" defaultValue={vehicle.next_service_date ?? ""} className="form-input text-sm" />
@@ -564,6 +839,10 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
             <div>
               <label className="form-label text-sm">Revenue License Expiry</label>
               <input name="revenue_license_expiry" type="date" defaultValue={vehicle.revenue_license_expiry ?? ""} className="form-input text-sm" />
+            </div>
+            <div>
+              <label className="form-label text-sm">Eco Test Expiry</label>
+              <input name="eco_test_expiry" type="date" defaultValue={vehicle.eco_test_expiry ?? ""} className="form-input text-sm" />
             </div>
           </div>
 
@@ -598,11 +877,68 @@ export default function VehicleDetailClient({ vehicle: initial, suppliers, renta
             </div>
           </div>
 
+          {/* Documents inside edit modal */}
+          <div className="mb-6 border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Vehicle Documents</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FileUploader
+                label="Registration Document (JPG/PDF, max 5MB)"
+                fieldName="registration_document"
+                bucket="vehicle-documents"
+                folder={vehicle.id}
+                accept=".jpg,.jpeg,.pdf"
+                multiple={false}
+                maxFiles={1}
+                initialFiles={vehicle.registration_document_url ? [{ url: vehicle.registration_document_url, path: vehicle.registration_document_path || "" }] : []}
+              />
+              <FileUploader
+                label="Revenue License (JPG/PDF, max 5MB)"
+                fieldName="revenue_license"
+                bucket="vehicle-documents"
+                folder={vehicle.id}
+                accept=".jpg,.jpeg,.pdf"
+                multiple={false}
+                maxFiles={1}
+                initialFiles={vehicle.revenue_license_url ? [{ url: vehicle.revenue_license_url, path: vehicle.revenue_license_path || "" }] : []}
+              />
+              <FileUploader
+                label="Eco Test (JPG/PDF, max 5MB)"
+                fieldName="eco_test"
+                bucket="vehicle-documents"
+                folder={vehicle.id}
+                accept=".jpg,.jpeg,.pdf"
+                multiple={false}
+                maxFiles={1}
+                initialFiles={vehicle.eco_test_url ? [{ url: vehicle.eco_test_url, path: vehicle.eco_test_path || "" }] : []}
+              />
+              <FileUploader
+                label="Insurance (JPG/PDF, max 5MB)"
+                fieldName="insurance"
+                bucket="vehicle-documents"
+                folder={vehicle.id}
+                accept=".jpg,.jpeg,.pdf"
+                multiple={false}
+                maxFiles={1}
+                initialFiles={vehicle.insurance_url ? [{ url: vehicle.insurance_url, path: vehicle.insurance_path || "" }] : []}
+              />
+              <FileUploader
+                label="Service Tag (JPG/PDF, max 5MB)"
+                fieldName="service_tag"
+                bucket="vehicle-documents"
+                folder={vehicle.id}
+                accept=".jpg,.jpeg,.pdf"
+                multiple={false}
+                maxFiles={1}
+                initialFiles={vehicle.service_tag_url ? [{ url: vehicle.service_tag_url, path: vehicle.service_tag_path || "" }] : []}
+              />
+            </div>
+          </div>
+
           {/* Photos inside edit modal */}
           <div className="mb-6">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 border-t border-gray-100 pt-4">Vehicle Photos</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Vehicle Photos</p>
             <FileUploader
-              label=""
+              label="(JPG/PNG, max 5MB per photo, up to 6)"
               bucket="vehicle-photos"
               folder={vehicle.id}
               accept="image/*"

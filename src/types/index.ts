@@ -39,8 +39,13 @@ export interface Supplier {
   email?: string;
   address?: string;
   nic?: string;
+  bank?: string;
+  account_number?: string;
+  branch?: string;
   notes?: string;
   is_active: boolean;
+  nic_front_url?: string;
+  nic_back_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -72,6 +77,19 @@ export interface Vehicle {
   agreement_end_date?: string;
   payment_type?: string;
   notes?: string;
+  registration_document_url?: string;
+  registration_document_path?: string;
+  revenue_license_url?: string;
+  revenue_license_path?: string;
+  eco_test_url?: string;
+  eco_test_path?: string;
+  insurance_url?: string;
+  insurance_path?: string;
+  service_tag_url?: string;
+  service_tag_path?: string;
+  monthly_cost?: number;
+  payment_frequency?: string;
+  payment_days?: string;
   is_active: boolean;
   photos?: VehiclePhoto[];
   rate_tiers?: RateTier[];
@@ -108,6 +126,12 @@ export interface Customer {
   license_expiry?: string;
   notes?: string;
   is_active: boolean;
+  nic_front_url?: string;
+  nic_back_url?: string;
+  photo_url?: string;
+  utility_bill_url?: string;
+  driving_license_front_url?: string;
+  driving_license_back_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -126,6 +150,7 @@ export interface Guarantor {
   nic_front_url?: string;
   nic_back_url?: string;
   photo_url?: string;
+  utility_bill_url?: string;
   created_at: string;
   updated_at: string;
 }

@@ -22,6 +22,9 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
   const [brand, setBrand] = useState("Toyota");
   const [model, setModel] = useState("Corolla");
   const [models, setModels] = useState<string[]>(getModels("Toyota"));
+  const [source, setSource] = useState("Company");
+  const [payFreq, setPayFreq] = useState("1_month");
+  const [payDays, setPayDays] = useState("");
 
   // Rate tiers
   const [monthlyRate, setMonthlyRate] = useState(30000);
@@ -33,6 +36,19 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
     const m = getModels(b);
     setModels(m);
     setModel(m[0]);
+  }
+
+  function calcPaymentDays(freq: string): string {
+    const today = new Date();
+    const d1 = new Date(today); d1.setDate(today.getDate() + 15);
+    const d2 = new Date(today); d2.setDate(today.getDate() + 30);
+    if (freq === "15_days") return `${d1.getDate()},${d2.getDate()}`;
+    return `${d2.getDate()}`;
+  }
+
+  function handlePayFreqChange(freq: string) {
+    setPayFreq(freq);
+    setPayDays(calcPaymentDays(freq));
   }
 
   function handleMonthlyChange(val: number) {
@@ -120,7 +136,7 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
           {/* Source */}
           <div>
             <label className="form-label">Source</label>
-            <select name="source" className="form-select">
+            <select name="source" className="form-select" value={source} onChange={e => setSource(e.target.value)}>
               <option value="Company">Company</option>
               <option value="Supplier">Supplier</option>
             </select>
@@ -134,6 +150,42 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
               {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
+
+          {/* Supplier Payment — only shown when source is Supplier */}
+          {source === "Supplier" && (
+            <>
+              <div>
+                <label className="form-label">Monthly Cost (Rs.)</label>
+                <input name="monthly_cost" type="number" min="0" step="0.01" placeholder="e.g. 30000" className="form-input" />
+              </div>
+              <div>
+                <label className="form-label">Payment Frequency</label>
+                <select
+                  name="payment_frequency"
+                  className="form-select"
+                  value={payFreq}
+                  onChange={e => handlePayFreqChange(e.target.value)}
+                >
+                  <option value="1_month">1 Month</option>
+                  <option value="15_days">15 Days</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Payment Day(s) of Month</label>
+                <input
+                  name="payment_days"
+                  type="text"
+                  readOnly
+                  value={payDays}
+                  placeholder="Select frequency to auto-fill"
+                  className="form-input bg-gray-50 text-gray-500 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  {payFreq === "15_days" ? "Two payments per month on these days" : "One payment per month on this day"}
+                </p>
+              </div>
+            </>
+          )}
 
           {/* KM Fields */}
           <div>
@@ -158,6 +210,10 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
             <label className="form-label">Revenue License Expiry</label>
             <input name="revenue_license_expiry" type="date" className="form-input" />
           </div>
+          <div>
+            <label className="form-label">Eco Test Expiry</label>
+            <input name="eco_test_expiry" type="date" className="form-input" />
+          </div>
         </div>
 
         {/* Notes */}
@@ -169,12 +225,65 @@ export default function NewVehicleClient({ suppliers }: { suppliers: Supplier[] 
         {/* Vehicle Photos Upload */}
         <div className="px-5 pb-5">
           <FileUploader
-            label="Vehicle Photos"
+            label="Vehicle Photos (JPG/PNG, max 5MB per photo, up to 6)"
             bucket="temp-uploads"
             folder="vehicles/new"
             accept="image/*"
             multiple={true}
             maxFiles={6}
+          />
+        </div>
+
+        {/* Vehicle Registration Document Upload */}
+        <div className="px-5 pb-5">
+          <FileUploader
+            label="Vehicle Registration Document (JPG/PDF, max 5MB)"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept=".jpg,.jpeg,.pdf"
+            multiple={false}
+            maxFiles={1}
+            fieldName="registration_document"
+          />
+        </div>
+
+        {/* Additional Documents Upload */}
+        <div className="px-5 pb-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FileUploader
+            label="Revenue License (JPG/PDF, max 5MB)"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept=".jpg,.jpeg,.pdf"
+            multiple={false}
+            maxFiles={1}
+            fieldName="revenue_license"
+          />
+          <FileUploader
+            label="Eco Test (JPG/PDF, max 5MB)"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept=".jpg,.jpeg,.pdf"
+            multiple={false}
+            maxFiles={1}
+            fieldName="eco_test"
+          />
+          <FileUploader
+            label="Insurance (JPG/PDF, max 5MB)"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept=".jpg,.jpeg,.pdf"
+            multiple={false}
+            maxFiles={1}
+            fieldName="insurance"
+          />
+          <FileUploader
+            label="Service Tag (JPG/PDF, max 5MB)"
+            bucket="temp-uploads"
+            folder="vehicles/new"
+            accept=".jpg,.jpeg,.pdf"
+            multiple={false}
+            maxFiles={1}
+            fieldName="service_tag"
           />
         </div>
       </div>

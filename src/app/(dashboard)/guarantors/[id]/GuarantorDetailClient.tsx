@@ -168,10 +168,11 @@ export default function GuarantorDetailClient({
 
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">Documents & Photos</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <ImageCard label="NIC Front" url={guarantor.nic_front_url} />
                   <ImageCard label="NIC Back" url={guarantor.nic_back_url} />
                   <ImageCard label="Photo" url={guarantor.photo_url} />
+                  <ImageCard label="Utility Bill" url={guarantor.utility_bill_url} />
                 </div>
               </div>
             </div>
@@ -297,10 +298,11 @@ export default function GuarantorDetailClient({
           </div>
           <div className="md:col-span-2">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 border-t border-gray-100 pt-4">Documents & Photos</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <FileUploader label="NIC Front" fieldName="nic_front" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.nic_front_url ? [{ url: guarantor.nic_front_url, path: guarantor.nic_front_url }] : []} />
-              <FileUploader label="NIC Back" fieldName="nic_back" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.nic_back_url ? [{ url: guarantor.nic_back_url, path: guarantor.nic_back_url }] : []} />
-              <FileUploader label="Photo" fieldName="photo" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.photo_url ? [{ url: guarantor.photo_url, path: guarantor.photo_url }] : []} />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
+              <FileUploader label="NIC Front (JPG/PNG/PDF, max 5MB)" fieldName="nic_front" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.nic_front_url ? [{ url: guarantor.nic_front_url, path: guarantor.nic_front_path || guarantor.nic_front_url }] : []} />
+              <FileUploader label="NIC Back (JPG/PNG/PDF, max 5MB)" fieldName="nic_back" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.nic_back_url ? [{ url: guarantor.nic_back_url, path: guarantor.nic_back_path || guarantor.nic_back_url }] : []} />
+              <FileUploader label="Photo (JPG/PNG, max 5MB)" fieldName="photo" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.photo_url ? [{ url: guarantor.photo_url, path: guarantor.photo_path || guarantor.photo_url }] : []} />
+              <FileUploader label="Utility Bill (JPG/PNG/PDF, max 5MB)" fieldName="utility_bill" bucket="guarantors" folder={guarantor.id} maxFiles={1} initialFiles={guarantor.utility_bill_url ? [{ url: guarantor.utility_bill_url, path: guarantor.utility_bill_path || guarantor.utility_bill_url }] : []} />
             </div>
           </div>
           {error && <p className="md:col-span-2 text-sm text-red-600">{error}</p>}

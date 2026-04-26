@@ -2,7 +2,7 @@
 
 export const BRANDS = [
   { name: "Toyota", models: ["Corolla","Axio","Premio","Allion","Vitz","Aqua","Prius","Raize","CHR","Land Cruiser Prado","Land Cruiser","Rush","KDH","Hiace","Noah","Voxy","Other"] },
-  { name: "Suzuki", models: ["Alto","Wagon R","Celerio","Swift","Every","Spacia","Other"] },
+  { name: "Suzuki", models: ["Alto","Wagon R","Baleno","Celerio","Swift","Every","Spacia","Other"] },
   { name: "Nissan", models: ["Sunny","X-Trail","Leaf","March","Dayz","Caravan","Other"] },
   { name: "Honda", models: ["Fit","Vezel","Civic","Grace","CR-V","Other"] },
   { name: "Mitsubishi", models: ["Lancer","Outlander","Montero","Pajero","Eclipse Cross","Other"] },
@@ -60,3 +60,31 @@ export function calcTiersFromMonthly(monthly: number) {
 }
 
 export const YEARS = Array.from({ length: 2026 - 2000 + 1 }, (_, i) => 2026 - i); // 2026 down to 2000
+
+export const BANKS = [
+  "Amana Bank PLC",
+  "Bank of Ceylon",
+  "Bank of China Ltd",
+  "Cargills Bank PLC",
+  "Citibank, N.A.",
+  "Commercial Bank of Ceylon PLC",
+  "Deutsche Bank AG, Colombo Branch",
+  "DFCC Bank PLC",
+  "Habib Bank Ltd",
+  "Hatton National Bank PLC",
+  "Indian Bank",
+  "Indian Overseas Bank",
+  "MCB Bank Ltd",
+  "National Development Bank PLC",
+  "Nations Trust Bank PLC",
+  "Pan Asia Banking Corporation PLC",
+  "People's Bank",
+  "Public Bank Berhad",
+  "Sampath Bank PLC",
+  "Seylan Bank PLC",
+  "Standard Chartered Bank",
+  "State Bank of India",
+  "The Hongkong & Shanghai Banking",
+  "Union Bank of Colombo PLC",
+] as const;
+export type Bank = (typeof BANKS)[number];

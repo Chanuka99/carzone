@@ -60,6 +60,9 @@ export async function createCustomer(formData: FormData) {
   const nic_front_url = (formData.get('nic_front_url') as string) || null;
   const nic_back_url = (formData.get('nic_back_url') as string) || null;
   const photo_url = (formData.get('customer_photo_url') as string) || (formData.get('photo_url') as string) || null;
+  const utility_bill_url = (formData.get('utility_bill_url') as string) || null;
+  const driving_license_front_url = (formData.get('driving_license_front_url') as string) || null;
+  const driving_license_back_url = (formData.get('driving_license_back_url') as string) || null;
 
   const payload: Record<string, unknown> = {
     name: formData.get('name') as string,
@@ -75,6 +78,9 @@ export async function createCustomer(formData: FormData) {
     nic_front_url,
     nic_back_url,
     photo_url,
+    utility_bill_url,
+    driving_license_front_url,
+    driving_license_back_url,
   };
 
   const { data, error } = await supabaseAdmin.from('customers').insert(payload).select().single();
@@ -105,11 +111,14 @@ export async function updateCustomer(id: string, formData: FormData) {
   const nic_front_url = (formData.get('nic_front_url') as string) || null;
   const nic_back_url = (formData.get('nic_back_url') as string) || null;
   const photo_url = (formData.get('customer_photo_url') as string) || (formData.get('photo_url') as string) || null;
+  const utility_bill_url = (formData.get('utility_bill_url') as string) || null;
+  const driving_license_front_url = (formData.get('driving_license_front_url') as string) || null;
+  const driving_license_back_url = (formData.get('driving_license_back_url') as string) || null;
 
   // Fetch current record to clean up old storage files + build diff
   const { data: current } = await supabaseAdmin
     .from('customers')
-    .select('name, nic, phone, phone2, email, address, license_number, license_expiry, notes, nic_front_url, nic_back_url, photo_url')
+    .select('name, nic, phone, phone2, email, address, license_number, license_expiry, notes, nic_front_url, nic_back_url, photo_url, utility_bill_url, driving_license_front_url, driving_license_back_url')
     .eq('id', id)
     .single();
 
@@ -118,6 +127,9 @@ export async function updateCustomer(id: string, formData: FormData) {
       deleteOldStorageFile(current.nic_front_url, nic_front_url),
       deleteOldStorageFile(current.nic_back_url, nic_back_url),
       deleteOldStorageFile(current.photo_url, photo_url),
+      deleteOldStorageFile(current.utility_bill_url, utility_bill_url),
+      deleteOldStorageFile(current.driving_license_front_url, driving_license_front_url),
+      deleteOldStorageFile(current.driving_license_back_url, driving_license_back_url),
     ]);
   }
 
@@ -135,6 +147,9 @@ export async function updateCustomer(id: string, formData: FormData) {
     nic_front_url,
     nic_back_url,
     photo_url,
+    utility_bill_url,
+    driving_license_front_url,
+    driving_license_back_url,
   };
 
   const { error } = await supabaseAdmin.from('customers').update(payload).eq('id', id);
